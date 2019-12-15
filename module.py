@@ -3,8 +3,8 @@ from ops import *
 import tensorflow.contrib.layers as layers
 import math
 
-def conv_nn(input, dims1, dims2, size1, size2, k_size = 3):
 
+def conv_nn(input, dims1, dims2, size1, size2, k_size=3):
     pp = tf.pad(input, [[0, 0], [1, 1], [1, 1], [0, 0]], "REFLECT")
     L1 = layers.conv2d(pp, dims1, [k_size, k_size], stride=[1, 1], padding='VALID', activation_fn=None)
     L1 = tf.nn.elu(L1)
@@ -15,6 +15,7 @@ def conv_nn(input, dims1, dims2, size1, size2, k_size = 3):
     L2 = tf.image.resize_nearest_neighbor(L2, (size1, size2))
 
     return L2
+
 
 def encoder(input, reuse, name):
     with tf.variable_scope(name):
@@ -62,6 +63,7 @@ def encoder(input, reuse, name):
 
         return DCL4
 
+
 def decoder(input, size1, size2, reuse, name):
     with tf.variable_scope(name):
         if reuse:
@@ -69,9 +71,9 @@ def decoder(input, size1, size2, reuse, name):
         else:
             assert tf.get_variable_scope().reuse is False
 
-        DL1 = conv_nn(input, 128, 128, int(size1/4), int(size2/4))  # 64 64 128
+        DL1 = conv_nn(input, 128, 128, int(size1 / 4), int(size2 / 4))  # 64 64 128
 
-        DL2 = conv_nn(DL1, 64, 64, int(size1/2), int(size2/2))  # 128 128 64
+        DL2 = conv_nn(DL1, 64, 64, int(size1 / 2), int(size2 / 2))  # 128 128 64
 
         DL3 = conv_nn(DL2, 32, 32, int(size1), int(size2))
 
@@ -81,6 +83,7 @@ def decoder(input, size1, size2, reuse, name):
         LL2 = tf.clip_by_value(LL2, -1.0, 1.0)
 
         return LL2
+
 
 def discriminator_G(input, reuse, name):
     with tf.variable_scope(name):
@@ -92,28 +95,29 @@ def discriminator_G(input, reuse, name):
 
         p = tf.pad(input, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L1 = layers.conv2d(p, 64, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L1 = instance_norm(L1, 'di1')
+        # L1 = instance_norm(L1, 'di1')
         L1 = tf.nn.leaky_relu(L1)
 
         p = tf.pad(L1, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L2 = layers.conv2d(p, 128, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L2 = instance_norm(L2, 'di2')
+        # L2 = instance_norm(L2, 'di2')
         L2 = tf.nn.leaky_relu(L2)
 
         p = tf.pad(L2, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L3 = layers.conv2d(p, 256, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L3 = instance_norm(L3, 'di3')
+        # L3 = instance_norm(L3, 'di3')
         L3 = tf.nn.leaky_relu(L3)
 
         p = tf.pad(L3, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L4 = layers.conv2d(p, 256, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L4 = instance_norm(L4, 'di4')
+        # L4 = instance_norm(L4, 'di4')
         L4 = tf.nn.leaky_relu(L4)
         L4 = layers.flatten(L4)
 
         L5 = tf.layers.dense(L4, 1)
 
         return L5
+
 
 def discriminator_L(input, reuse, name):
     with tf.variable_scope(name):
@@ -125,28 +129,29 @@ def discriminator_L(input, reuse, name):
 
         p = tf.pad(input, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L1 = layers.conv2d(p, 64, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L1 = instance_norm(L1, 'di1l')
-        L1 = tf.nn.leaky_relu(L1) # 32 32 64
+        # L1 = instance_norm(L1, 'di1l')
+        L1 = tf.nn.leaky_relu(L1)  # 32 32 64
 
         p = tf.pad(L1, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L2 = layers.conv2d(p, 128, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L2 = instance_norm(L2, 'di2l')
-        L2 = tf.nn.leaky_relu(L2) # 16 16 128
+        # L2 = instance_norm(L2, 'di2l')
+        L2 = tf.nn.leaky_relu(L2)  # 16 16 128
 
         p = tf.pad(L2, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L3 = layers.conv2d(p, 256, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L3 = instance_norm(L3, 'di3l')
-        L3 = tf.nn.leaky_relu(L3) # 8 8 256
+        # L3 = instance_norm(L3, 'di3l')
+        L3 = tf.nn.leaky_relu(L3)  # 8 8 256
 
         p = tf.pad(L3, [[0, 0], [2, 2], [2, 2], [0, 0]], "REFLECT")
         L4 = layers.conv2d(p, 512, [5, 5], stride=2, padding='VALID', activation_fn=None)
-        #L4 = instance_norm(L4, 'di4l')
-        L4 = tf.nn.leaky_relu(L4) # 4 4 512
+        # L4 = instance_norm(L4, 'di4l')
+        L4 = tf.nn.leaky_relu(L4)  # 4 4 512
         L4 = layers.flatten(L4)
 
         L5 = tf.layers.dense(L4, 1)
 
         return L5
+
 
 def discriminator_red(input, reuse, name):
     with tf.variable_scope(name):
@@ -184,27 +189,28 @@ def discriminator_red(input, reuse, name):
 
         return L7
 
+
 def contextual_block(bg_in, fg_in, mask, k_size, lamda, name, stride=1):
     with tf.variable_scope(name):
         b, h, w, dims = [i.value for i in bg_in.get_shape()]
         temp = tf.image.resize_nearest_neighbor(mask, (h, w))
-        temp = tf.expand_dims(temp[:, :, :, 0], 3) # b 128 128 1
-        mask_r = tf.tile(temp, [1, 1, 1, dims]) # b 128 128 128
+        temp = tf.expand_dims(temp[:, :, :, 0], 3)  # b 128 128 1
+        mask_r = tf.tile(temp, [1, 1, 1, dims])  # b 128 128 128
         bg = bg_in * mask_r
 
         kn = int((k_size - 1) / 2)
         c = 0
-        for p in range(kn, h - kn, stride):
-            for q in range(kn, w - kn, stride):
+        for _ in range(kn, h - kn, stride):
+            for _ in range(kn, w - kn, stride):
                 c += 1
 
         patch1 = tf.extract_image_patches(bg, [1, k_size, k_size, 1], [1, stride, stride, 1], [1, 1, 1, 1], 'VALID')
 
-        patch1 = tf.reshape(patch1, (b, 1, c, k_size*k_size*dims))
+        patch1 = tf.reshape(patch1, (b, 1, c, k_size * k_size * dims))
         patch1 = tf.reshape(patch1, (b, 1, 1, c, k_size * k_size * dims))
         patch1 = tf.transpose(patch1, [0, 1, 2, 4, 3])
 
-        patch2 = tf.extract_image_patches(fg_in, [1,k_size,k_size,1], [1,1,1,1], [1,1,1,1], 'SAME')
+        patch2 = tf.extract_image_patches(fg_in, [1, k_size, k_size, 1], [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')
         ACL = []
 
         for ib in range(b):
@@ -230,11 +236,7 @@ def contextual_block(bg_in, fg_in, mask, k_size, lamda, name, stride=1):
             ACLt = tf.nn.conv2d_transpose(CA, k2, output_shape=[1, h, w, dims], strides=[1, 1, 1, 1], padding='SAME')
             ACLt = ACLt / (k_size ** 2)
 
-            if ib == 0:
-                ACL = ACLt
-            else:
-                ACL = tf.concat((ACL, ACLt), 0)
-
+            ACL = ACLt if ib == 0 else tf.concat((ACL, ACLt), 0)
         ACL = bg + ACL * (1.0 - mask_r)
 
         con1 = tf.concat([bg_in, ACL], 3)
@@ -243,27 +245,28 @@ def contextual_block(bg_in, fg_in, mask, k_size, lamda, name, stride=1):
 
         return ACL2
 
+
 def contextual_block_cs(bg_in, fg_in, mask, k_size, lamda, name, stride=1):
     with tf.variable_scope(name):
         b, h, w, dims = [i.value for i in bg_in.get_shape()]
         temp = tf.image.resize_nearest_neighbor(mask, (h, w))
-        temp = tf.expand_dims(temp[:, :, :, 0], 3) # b 128 128 1
-        mask_r = tf.tile(temp, [1, 1, 1, dims]) # b 128 128 128
+        temp = tf.expand_dims(temp[:, :, :, 0], 3)  # b 128 128 1
+        mask_r = tf.tile(temp, [1, 1, 1, dims])  # b 128 128 128
         bg = bg_in * mask_r
 
         kn = int((k_size - 1) / 2)
         c = 0
-        for p in range(kn, h - kn, stride):
-            for q in range(kn, w - kn, stride):
+        for _ in range(kn, h - kn, stride):
+            for _ in range(kn, w - kn, stride):
                 c += 1
 
         patch1 = tf.extract_image_patches(bg, [1, k_size, k_size, 1], [1, stride, stride, 1], [1, 1, 1, 1], 'VALID')
 
-        patch1 = tf.reshape(patch1, (b, 1, c, k_size*k_size*dims))
+        patch1 = tf.reshape(patch1, (b, 1, c, k_size * k_size * dims))
         patch1 = tf.reshape(patch1, (b, 1, 1, c, k_size * k_size * dims))
         patch1 = tf.transpose(patch1, [0, 1, 2, 4, 3])
 
-        patch2 = tf.extract_image_patches(fg_in, [1,k_size,k_size,1], [1,1,1,1], [1,1,1,1], 'SAME')
+        patch2 = tf.extract_image_patches(fg_in, [1, k_size, k_size, 1], [1, 1, 1, 1], [1, 1, 1, 1], 'SAME')
         ACL = []
 
         fuse_weight = tf.reshape(tf.eye(3), [3, 3, 1, 1])
@@ -294,12 +297,5 @@ def contextual_block_cs(bg_in, fg_in, mask, k_size, lamda, name, stride=1):
             ACLt = tf.nn.conv2d_transpose(CA2, k1, output_shape=[1, h, w, dims], strides=[1, 1, 1, 1], padding='SAME')
             ACLt = ACLt / (k_size ** 2)
 
-            if ib == 0:
-                ACL = ACLt
-            else:
-                ACL = tf.concat((ACL, ACLt), 0)
-
-        ACL2 = bg + ACL * (1.0 - mask_r)
-
-        return ACL2
-
+            ACL = ACLt if ib == 0 else tf.concat((ACL, ACLt), 0)
+        return bg + ACL * (1.0 - mask_r)

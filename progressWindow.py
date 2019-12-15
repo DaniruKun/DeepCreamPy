@@ -5,15 +5,16 @@
 import sys
 import PySide2
 from PySide2.QtWidgets import (QApplication, QMainWindow, QDesktopWidget, QPushButton,
-                             QToolTip, QLabel, QProgressBar, QAction, qApp)
+                               QToolTip, QLabel, QProgressBar, QAction, qApp)
 # from PyQt5.QtCore import QThread
 from signals import Signals
 import threading
 import time
 
+
 class ProgressWindow(QMainWindow):
     # debug for setting UI
-    def __init__(self, MainWindow, decensor, debug = False):
+    def __init__(self, MainWindow, decensor, debug=False):
         super().__init__()
         self.width = 700
         self.height = 500
@@ -38,7 +39,6 @@ class ProgressWindow(QMainWindow):
 
             self.runDecensor()
 
-
     def initUI(self):
         '''
         Must Todo UI:
@@ -51,6 +51,7 @@ class ProgressWindow(QMainWindow):
         Could Do UI:
         1. showing live image decensoring (decensored one by one)
         '''
+
         # progress bar showing images left to be decensored
         def setProgressBar():
             bar_X = 50
@@ -61,13 +62,13 @@ class ProgressWindow(QMainWindow):
             # images waiting to be decensored
             self.total_images_ProgressBar = QProgressBar(self)
             # setGeometry(left top x cordinate, left top y cordinate, width, height)
-            self.total_images_ProgressBar.setGeometry(bar_X, bar_Y, bar_width,bar_height )
+            self.total_images_ProgressBar.setGeometry(bar_X, bar_Y, bar_width, bar_height)
             self.total_images_ProgressBar.setMaximum(100)
             self.total_images_ProgressBar.setValue(0)
 
             # showing progress of decensored area
             self.signal_image_decensor_ProgressBar = QProgressBar(self)
-            self.signal_image_decensor_ProgressBar.setGeometry(bar_X, bar_Y+80, bar_width,bar_height )
+            self.signal_image_decensor_ProgressBar.setGeometry(bar_X, bar_Y + 80, bar_width, bar_height)
             self.signal_image_decensor_ProgressBar.setMaximum(100)
             self.signal_image_decensor_ProgressBar.setValue(0)
 
@@ -134,16 +135,19 @@ class ProgressWindow(QMainWindow):
         # print("start run")
         self.decensor.start()
 
+
 if __name__ == "__main__":
     # only use for debuging window
 
     import os
+
     # you could remove this if statement if there's no error without this
     if os.name == 'nt':
         import PySide2
+
         pyqt = os.path.dirname(PySide2.__file__)
         QApplication.addLibraryPath(os.path.join(pyqt, "plugins"))
     app = QApplication(sys.argv)
-    ex = ProgressWindow(1, 1, debug  = True)
+    ex = ProgressWindow(1, 1, debug=True)
     ex.show()
-    sys.exit( app.exec_() )
+    sys.exit(app.exec_())

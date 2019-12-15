@@ -6,21 +6,22 @@ import math as mt
 import cv2
 from scipy import misc
 
+
 def instance_norm(input, name="instance_norm"):
     with tf.variable_scope(name):
         depth = input.get_shape()[3]
         scale = tf.get_variable("scale", [depth], initializer=tf.random_normal_initializer(1.0, 0.02, dtype=tf.float32))
         offset = tf.get_variable("offset", [depth], initializer=tf.constant_initializer(0.0))
-        mean, variance = tf.nn.moments(input, axes=[1,2], keep_dims=True)
+        mean, variance = tf.nn.moments(input, axes=[1, 2], keep_dims=True)
         epsilon = 1e-5
         inv = tf.rsqrt(variance + epsilon)
-        normalized = (input-mean)*inv
-        return scale*normalized + offset
+        normalized = (input - mean) * inv
+        return scale * normalized + offset
+
 
 def make_sq_mask(size, m_size, batch_size):
-
-    start_x = rr.randint(0, size - m_size-1)
-    start_y = rr.randint(0, size - m_size-1)
+    start_x = rr.randint(0, size - m_size - 1)
+    start_y = rr.randint(0, size - m_size - 1)
 
     temp = np.ones([batch_size, size, size, 3])
 
@@ -28,15 +29,12 @@ def make_sq_mask(size, m_size, batch_size):
 
     return temp, start_x, start_y
 
-def softmax(input):
 
+def softmax(input):
     k = tf.exp(input - 3)
     k = tf.reduce_sum(k, 3, True)
-    # k = k - num * tf.ones_like(k)
+    return tf.exp(input - 3) / k
 
-    ouput = tf.exp(input - 3) / k
-
-    return ouput
 
 def reduce_var(x, axis=None, keepdims=False):
     """Variance of a tensor, alongside the specified axis.
@@ -56,6 +54,7 @@ def reduce_var(x, axis=None, keepdims=False):
     devs_squared = tf.square(x - m)
     return tf.reduce_mean(devs_squared, axis=axis, keepdims=keepdims)
 
+
 def reduce_std(x, axis=None, keepdims=False):
     """Standard deviation of a tensor, alongside the specified axis.
 
@@ -72,26 +71,27 @@ def reduce_std(x, axis=None, keepdims=False):
     """
     return tf.sqrt(reduce_var(x, axis=axis, keepdims=keepdims))
 
+
 def l2_norm(v, eps=1e-12):
     return v / (tf.reduce_sum(v ** 2) ** 0.5 + eps)
 
-def ff_mask(size, b_zise, maxLen, maxWid, maxAng, maxNum, maxVer, minLen = 20, minWid = 15, minVer = 5):
 
+def ff_mask(size, b_zise, maxLen, maxWid, maxAng, maxNum, maxVer, minLen=20, minWid=15, minVer=5):
     mask = np.ones((b_zise, size, size, 3))
 
     num = rr.randint(3, maxNum)
 
-    for i in range(num):
+    for _ in range(num):
         startX = rr.randint(0, size)
         startY = rr.randint(0, size)
         numVer = rr.randint(minVer, maxVer)
         width = rr.randint(minWid, maxWid)
-        for j in range(numVer):
+        for _ in range(numVer):
             angle = rr.uniform(-maxAng, maxAng)
             length = rr.randint(minLen, maxLen)
 
-            endX = min(size-1, max(0, int(startX + length * mt.sin(angle))))
-            endY = min(size-1, max(0, int(startY + length * mt.cos(angle))))
+            endX = min(size - 1, max(0, int(startX + length * mt.sin(angle))))
+            endY = min(size - 1, max(0, int(startY + length * mt.cos(angle))))
 
             if endX >= startX:
                 lowx = startX
@@ -106,23 +106,24 @@ def ff_mask(size, b_zise, maxLen, maxWid, maxAng, maxNum, maxVer, minLen = 20, m
                 lowy = endY
                 highy = startY
 
-            if abs(startY-endY) + abs(startX - endX) != 0:
+            if abs(startY - endY) + abs(startX - endX) != 0:
 
-                wlx = max(0, lowx-int(abs(width * mt.cos(angle))))
-                whx = min(size - 1,  highx+1 + int(abs(width * mt.cos(angle))))
+                wlx = max(0, lowx - int(abs(width * mt.cos(angle))))
+                whx = min(size - 1, highx + 1 + int(abs(width * mt.cos(angle))))
                 wly = max(0, lowy - int(abs(width * mt.sin(angle))))
-                why = min(size - 1, highy+1 + int(abs(width * mt.sin(angle))))
+                why = min(size - 1, highy + 1 + int(abs(width * mt.sin(angle))))
 
                 for x in range(wlx, whx):
                     for y in range(wly, why):
 
-                        d = abs((endY-startY)*x - (endX -startX)*y - endY*startX + startY*endX) / mt.sqrt((startY-endY)**2 + (startX -endX)**2)
+                        d = abs((endY - startY) * x - (endX - startX) * y - endY * startX + startY * endX) / mt.sqrt(
+                            (startY - endY) ** 2 + (startX - endX) ** 2)
 
                         if d <= width:
                             mask[:, x, y, :] = 0
 
-            wlx = max(0, lowx-width)
-            whx = min(size - 1, highx+width+1)
+            wlx = max(0, lowx - width)
+            whx = min(size - 1, highx + width + 1)
             wly = max(0, lowy - width)
             why = min(size - 1, highy + width + 1)
 
@@ -141,8 +142,8 @@ def ff_mask(size, b_zise, maxLen, maxWid, maxAng, maxNum, maxVer, minLen = 20, m
 
     return mask
 
-def ff_mask_batch(size, b_size, maxLen, maxWid, maxAng, maxNum, maxVer, minLen = 20, minWid = 15, minVer = 5):
 
+def ff_mask_batch(size, b_size, maxLen, maxWid, maxAng, maxNum, maxVer, minLen=20, minWid=15, minVer=5):
     mask = None
     temp = ff_mask(size, 1, maxLen, maxWid, maxAng, maxNum, maxVer, minLen=minLen, minWid=minWid, minVer=minVer)
     temp = temp[0]
@@ -158,15 +159,16 @@ def ff_mask_batch(size, b_size, maxLen, maxWid, maxAng, maxNum, maxVer, minLen =
 
     return mask
 
+
 def spectral_norm(w, name, iteration=1):
     w_shape = w.shape.as_list()
     w = tf.reshape(w, [-1, w_shape[-1]])
 
-    u = tf.get_variable(name+"u", [1, w_shape[-1]], initializer=tf.truncated_normal_initializer(), trainable=False)
+    u = tf.get_variable(name + "u", [1, w_shape[-1]], initializer=tf.truncated_normal_initializer(), trainable=False)
 
     u_hat = u
     v_hat = None
-    for i in range(iteration):
+    for _ in range(iteration):
         """
         power iteration
         Usually iteration = 1 will be enough
@@ -185,15 +187,17 @@ def spectral_norm(w, name, iteration=1):
 
     return w_norm
 
+
 def convolution_SN(tensor, output_dim, kernel_size, stride, name):
     _, h, w, c = [i.value for i in tensor.get_shape()]
 
-    w = tf.get_variable(name=name + 'w', shape=[kernel_size, kernel_size, c, output_dim], initializer=layers.xavier_initializer())
+    w = tf.get_variable(name=name + 'w', shape=[kernel_size, kernel_size, c, output_dim],
+                        initializer=layers.xavier_initializer())
     b = tf.get_variable(name=name + 'b', shape=[output_dim], initializer=tf.constant_initializer(0.0))
 
-    output = tf.nn.conv2d(tensor, filter=spectral_norm(w, name=name + 'w'), strides=[1, stride, stride, 1], padding='SAME') + b
+    return tf.nn.conv2d(tensor, filter=spectral_norm(w, name=name + 'w'), strides=[1, stride, stride, 1],
+                              padding='SAME') + b
 
-    return output
 
 def dense_SN(tensor, output_dim, name):
     _, h, w, c = [i.value for i in tensor.get_shape()]
@@ -201,9 +205,8 @@ def dense_SN(tensor, output_dim, name):
     w = tf.get_variable(name=name + 'w', shape=[h, w, c, output_dim], initializer=layers.xavier_initializer())
     b = tf.get_variable(name=name + 'b', shape=[output_dim], initializer=tf.constant_initializer(0.0))
 
-    output = tf.nn.conv2d(tensor, filter=spectral_norm(w, name=name + 'w'), strides=[1, 1, 1, 1], padding='VALID') + b
+    return tf.nn.conv2d(tensor, filter=spectral_norm(w, name=name + 'w'), strides=[1, 1, 1, 1], padding='VALID') + b
 
-    return output
 
 def dense_RED_SN(tensor, name):
     sn_w = None
@@ -213,21 +216,15 @@ def dense_RED_SN(tensor, name):
     w = int(w)
     c = int(c)
 
-    weight = tf.get_variable(name=name + '_w', shape=[h*w, 1, c, 1], initializer=layers.xavier_initializer())
+    weight = tf.get_variable(name=name + '_w', shape=[h * w, 1, c, 1], initializer=layers.xavier_initializer())
     b = tf.get_variable(name=name + '_b', shape=[1, h, w, 1], initializer=tf.constant_initializer(0.0))
 
-    for it in range(h*w):
-        w_pixel = weight[it:it+1, :, :, :]
-        sn_w_pixel = spectral_norm(w_pixel, name=name + 'w_%d' %it)
+    for it in range(h * w):
+        w_pixel = weight[it:it + 1, :, :, :]
+        sn_w_pixel = spectral_norm(w_pixel, name=name + 'w_%d' % it)
 
-        if it == 0:
-            sn_w = sn_w_pixel
-        else:
-            sn_w = tf.concat([sn_w, sn_w_pixel], axis=0)
-
+        sn_w = sn_w_pixel if it == 0 else tf.concat([sn_w, sn_w_pixel], axis=0)
     w_rs = tf.reshape(sn_w, [h, w, c, 1])
     w_rs_t = tf.transpose(w_rs, [3, 0, 1, 2])
 
-    output_RED = tf.reduce_sum(tensor*w_rs_t + b, axis=3, keepdims=True)
-
-    return output_RED
+    return tf.reduce_sum(tensor * w_rs_t + b, axis=3, keepdims=True)
